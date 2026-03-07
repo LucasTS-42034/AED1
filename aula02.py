@@ -11,7 +11,7 @@ print("Você ganhou " + Win + " jogos!")
 
 print("Você perdeu " + lose + " jogos!")
 
-porcenVIT = (int(Win) / int(lose)) * 100
+porcenVIT = (int(Win) / int(games)) * 100
 
 print("Você venceu " + str(porcenVIT) + " dos jogos!")
 
