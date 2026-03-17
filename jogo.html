@@ -1,0 +1,514 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Isaac Roguelike</title>
+<style>
+body { background:black; color:#0f0; font-family:monospace; text-align:center;}
+canvas { border:2px solid #0f0; image-rendering: pixelated;}
+</style>
+</head>
+<body>
+
+<h2>Isaac Style Roguelike</h2>
+<p>Setas = mover | WASD = atirar</p>
+
+<canvas id="game" width="640" height="480"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+// CONSTANTS
+const TILE_SIZE = 32;
+const WORLD_WIDTH = 20;
+const WORLD_HEIGHT = 15;
+const BOUNDS = { min: 0.5, maxX: WORLD_WIDTH - 0.5, maxY: WORLD_HEIGHT - 0.5 };
+
+let frame = 0;
+let lastTime = 0;
+const FIXED_DT = 1 / 60;
+let accumulator = 0;
+
+// ================= CLASSES =================
+class Entity {
+  constructor(x, y, size = 1) {
+    this.x = x;
+    this.y = y;
+    this.size = size;
+  }
+  clampBounds() {
+    this.x = Math.max(BOUNDS.min, Math.min(BOUNDS.maxX, this.x));
+    this.y = Math.max(BOUNDS.min, Math.min(BOUNDS.maxY, this.y));
+  }
+}
+
+class Player extends Entity {
+  constructor() {
+    super(10, 7);
+    this.speed = 0.15;
+    this.hp = 6;
+    this.maxHp = 6;
+    this.damage = 1;
+    this.bulletSize = 6;
+    this.triple = false;
+    this.regen = false;
+    this.invincible = 0; // i-frames counter
+    this.shootCooldown = 0;
+  }
+}
+
+// ================= INPUT =================
+const keys = {};
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+// ================= ROOM =================
+class Room {
+  constructor() {
+    this.enemies = [];
+    this.cleared = false;
+  }
+  spawnEnemies(count = 6) {
+    this.enemies = [];
+    for (let i = 0; i < count; i++) {
+      this.enemies.push(new Enemy(Math.random() * (WORLD_WIDTH - 2) + 1, Math.random() * (WORLD_HEIGHT - 2) + 1));
+    }
+    this.cleared = false;
+  }
+}
+
+const player = new Player();
+const room = new Room();
+room.spawnEnemies();
+
+// ================= ITEMS =================
+let items = [];
+
+
+  constructor(x, y) {
+    super(x, y);
+    this.hp = 3;
+    this.speed = 0.03;
+    this.size = 0.625; // 20/32
+  }
+}
+
+const itemPool = [
+  {name:"Damage Up", color:"purple", apply(p){ p.damage++; }},
+  {name:"Speed Up", color:"blue", apply(p){ p.speed += 0.05; }},
+  {name:"Triple Shot", color:"green", apply(p){ p.triple = true; }},
+  {name:"Big Tears", color:"orange", apply(p){ p.bulletSize = 10; }},
+  {name:"Regen", color:"pink", apply(p){ p.regen = true; }}
+];
+
+function spawnItem(){
+  const itemData = itemPool[Math.floor(Math.random() * itemPool.length)];
+  items.push({ x: 10, y: 7, data: itemData });
+}
+
+function checkItems(){
+  items = items.filter(i=>{
+    if (Math.hypot(player.x-i.x,player.y-i.y)<0.8){
+      i.data.apply(player);
+      return false;
+    }
+    return true;
+  });
+}
+
+// ================= BULLETS =================
+class Bullet extends Entity {
+  constructor(x, y, dx, dy, size) {
+    super(x, y);
+    this.dx = dx;
+    this.dy = dy;
+    this.life = 60;
+    this.size = size;
+  }
+}
+
+const BULLET_POOL_SIZE = 200;
+let bullets = [];
+let bulletPool = [];
+
+class BulletPool {
+  static init() {
+    for (let i = 0; i < BULLET_POOL_SIZE; i++) {
+      bulletPool.push(new Bullet(0, 0, 0, 0, 1));
+    }
+  }
+  static get(x, y, dx, dy, size) {
+    if (bulletPool.length === 0) return null;
+    const b = bulletPool.pop();
+    b.x = x;
+    b.y = y;
+    b.dx = dx;
+    b.dy = dy;
+    b.size = size;
+    b.life = 60;
+    bullets.push(b);
+    return b;
+  }
+  static release(b) {
+    const idx = bullets.indexOf(b);
+    if (idx > -1) bullets.splice(idx, 1);
+    bulletPool.push(b);
+  }
+}
+
+BulletPool.init();
+
+function shoot(dirX, dirY) {
+  if (player.shootCooldown > 0) return;
+  player.shootCooldown = 6;
+
+  const speed = 0.4;
+  const spread = player.triple ? [-0.2, 0, 0.2] : [0];
+
+  spread.forEach(s => {
+    BulletPool.get(player.x, player.y, dirX * speed + s, dirY * speed + s, player.bulletSize);
+  });
+}
+
+let particles = []; // Sparks, blood
+
+class Particle extends Entity {
+  constructor(x, y, vx, vy, life, color) {
+    super(x, y);
+    this.vx = vx;
+    this.vy = vy;
+    this.life = life;
+    this.maxLife = life;
+    this.color = color;
+    this.size = 0.2;
+  }
+}
+
+function spawnParticles(x, y, count = 5, color = "#ff0") {
+  for (let i = 0; i < count; i++) {
+    particles.push(new Particle(x, y, 
+      (Math.random() - 0.5) * 0.2, 
+      (Math.random() - 0.5) * 0.2, 
+      30 + Math.random() * 20, 
+      color
+    ));
+  }
+}
+
+function updateParticles() {
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life--;
+    p.vy += 0.01; // gravity
+  });
+  particles = particles.filter(p => p.life > 0);
+}
+
+function updateBullets() {
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const b = bullets[i];
+    b.x += b.dx;
+    b.y += b.dy;
+    b.life--;
+    b.clampBounds();
+
+    for (let j = room.enemies.length - 1; j >= 0; j--) {
+      const e = room.enemies[j];
+      if (Math.hypot(e.x - b.x, e.y - b.y) < 0.5 + (b.size / 64)) {
+        e.hp -= player.damage;
+        spawnParticles(e.x, e.y, 8, "#f80");
+        BulletPool.release(b);
+        break;
+      }
+    }
+  }
+  bullets = bullets.filter(b => b.life > 0 && b.x > BOUNDS.min - 1 && b.x < BOUNDS.maxX + 1 && b.y > BOUNDS.min - 1 && b.y < BOUNDS.maxY + 1);
+}
+
+// ================= PLAYER UPDATE =================
+function updatePlayer() {
+  // Normalized movement
+  let vx = 0, vy = 0;
+  if (keys["ArrowLeft"] || keys["a"]) vx = -1;
+  if (keys["ArrowRight"] || keys["d"]) vx = 1;
+  if (keys["ArrowUp"] || keys["w"]) vy = -1;
+  if (keys["ArrowDown"] || keys["s"]) vy = 1;
+
+  const mag = Math.hypot(vx, vy);
+  if (mag > 0) {
+    vx = (vx / mag) * player.speed;
+    vy = (vy / mag) * player.speed;
+  }
+
+  player.x += vx;
+  player.y += vy;
+  player.clampBounds();
+
+  // Shooting (key down = shoot)
+  if (keys["w"]) shoot(0, -1);
+  if (keys["s"]) shoot(0, 1);
+  if (keys["a"]) shoot(-1, 0);
+  if (keys["d"]) shoot(1, 0);
+
+  if (player.shootCooldown > 0) player.shootCooldown--;
+  if (player.invincible > 0) player.invincible--;
+}
+
+// ================= ENEMIES =================
+let shakeX = 0, shakeY = 0;
+
+function updateEnemies() {
+  room.enemies.forEach(e => {
+    const dx = player.x - e.x;
+    const dy = player.y - e.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 0) {
+      e.x += (dx / dist) * e.speed;
+      e.y += (dy / dist) * e.speed;
+    }
+    e.clampBounds();
+
+    if (dist < 0.6 && player.invincible === 0) {
+      player.hp--;
+      player.invincible = 120;
+      shakeX = 5;
+      shakeY = 5;
+      spawnParticles(player.x, player.y, 12, "#f00");
+    }
+  });
+
+  room.enemies = room.enemies.filter(e => e.hp > 0);
+
+  if (room.enemies.length === 0 && !room.cleared) {
+    room.cleared = true;
+    spawnItem();
+    shakeX = 8;
+    shakeY = 8;
+  }
+}
+
+function updateShake() {
+  shakeX *= 0.9;
+  shakeY *= 0.9;
+}
+
+function updateRegen() {
+  if (player.regen && frame % 120 === 0) {
+    player.hp = Math.min(player.hp + 1, player.maxHp);
+    player.maxHp = Math.min(player.maxHp + 1, 10); // Slight maxHp grow
+  }
+}
+
+function checkItems() {
+  items = items.filter(i => {
+    if (Math.hypot(player.x - i.x, player.y - i.y) < 0.8) {
+      i.data.apply(player);
+      return false;
+    }
+    return true;
+  });
+}
+
+// ================= DRAW =================
+function draw() {
+  // Room bg tiles
+  for (let tx = 0; tx < WORLD_WIDTH; tx++) {
+    for (let ty = 0; ty < WORLD_HEIGHT; ty++) {
+      ctx.fillStyle = (tx + ty + frame / 60) % 2 ? "#222" : "#000";
+      ctx.fillRect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
+  }
+  // Overlay for arena
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Room bounds visualization
+  ctx.strokeStyle = "#0f0";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(BOUNDS.min * TILE_SIZE, BOUNDS.min * TILE_SIZE, (WORLD_WIDTH - 1) * TILE_SIZE, (WORLD_HEIGHT - 1) * TILE_SIZE);
+
+  // Pixel art player (Isaac-like head + body)
+  const px = Math.floor(player.x * TILE_SIZE) - 10;
+  const py = Math.floor(player.y * TILE_SIZE) - 10;
+  const flash = player.invincible % 20 < 10 ? 0.6 : 1;
+  ctx.save();
+  ctx.globalAlpha = flash;
+  // Head
+  ctx.fillStyle = "#ffdbac";
+  ctx.fillRect(px + 4, py, 12, 10);
+  ctx.fillStyle = "#000";
+  ctx.fillRect(px + 6, py + 2, 2, 2); // eye
+  ctx.fillRect(px + 10, py + 2, 2, 2); // eye
+  // Body
+  ctx.fillStyle = "#4a90e2";
+  ctx.fillRect(px + 2, py + 10, 16, 10);
+  ctx.restore();
+
+  // Pixel art enemies (fly/spider-like)
+  room.enemies.forEach((e, idx) => {
+    const ex = Math.floor(e.x * TILE_SIZE) - 10;
+    const ey = Math.floor(e.y * TILE_SIZE) - 10;
+    // Body
+    ctx.fillStyle = `hsl(${200 + idx * 10}, 60%, 40%)`;
+    ctx.fillRect(ex + 4, ey + 4, 12, 12);
+    // Wings/legs
+    ctx.fillStyle = "#666";
+    ctx.fillRect(ex, ey + 6, 4, 2);
+    ctx.fillRect(ex + 16, ey + 6, 4, 2);
+    ctx.fillRect(ex + 6, ey, 2, 4);
+    ctx.fillRect(ex + 12, ey, 2, 4);
+    // Eye
+    ctx.fillStyle = "#f00";
+    ctx.fillRect(ex + 8, ey + 2, 4, 4);
+  });
+
+  // Bullets (glowing)
+  ctx.shadowColor = "#fff";
+  ctx.shadowBlur = 8;
+  bullets.forEach(b => {
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(b.x * TILE_SIZE - b.size / 2, b.y * TILE_SIZE - b.size / 2, b.size, b.size);
+  });
+  ctx.shadowBlur = 0;
+
+  // Particles
+  particles.forEach(p => {
+    const alpha = p.life / p.maxLife;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x * TILE_SIZE - 3, p.y * TILE_SIZE - 3, 6, 6);
+    ctx.restore();
+  });
+
+  // Pixel art items (tear/crystal)
+  items.forEach(i => {
+    const ix = Math.floor(i.x * TILE_SIZE) - 8;
+    const iy = Math.floor(i.y * TILE_SIZE) - 8;
+    ctx.save();
+    ctx.fillStyle = i.data.color || "cyan";
+    // Tear shape
+    ctx.beginPath();
+    ctx.arc(ix + 8, iy + 6, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(ix + 6, iy + 10, 4, 4); // shine
+    ctx.restore();
+  });
+
+  // HUD: Hearts
+  ctx.fillStyle = "#f00";
+  ctx.font = "16px monospace";
+  for (let i = 0; i < player.hp; i++) {
+    ctx.fillRect(10 + i * 20, 10, 14, 14);
+  }
+  ctx.fillStyle = "#aaa";
+  for (let i = player.hp; i < player.maxHp; i++) {
+    ctx.fillRect(10 + i * 20, 10, 14, 14);
+  }
+
+  // Enhanced HUD
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fillRect(0, 0, 200, 80);
+  ctx.fillStyle = "#0f0";
+  ctx.font = "bold 14px monospace";
+  ctx.fillText(`HP ${player.hp}/${player.maxHp}`, 10, 20);
+  ctx.font = "12px monospace";
+  ctx.fillText(`DMG:${player.damage} SPD:${player.speed.toFixed(2)}`, 10, 35);
+  ctx.fillText(`Triple: ${player.triple ? 'YES' : 'NO'} Regen: ${player.regen ? 'YES' : 'NO'}`, 10, 48);
+  ctx.fillText(`Frame: ${frame.toLocaleString()}`, 10, 62);
+
+  // Minimap (simple)
+  ctx.fillStyle = "rgba(0,255,0,0.3)";
+  ctx.fillRect(canvas.width - 160, 10, 150, 110);
+  ctx.fillStyle = "#f00";
+  room.enemies.forEach(e => ctx.fillRect(canvas.width - 155 + e.x / WORLD_WIDTH * 140, 15 + e.y / WORLD_HEIGHT * 100, 2, 2));
+  ctx.fillStyle = "#ff0";
+  ctx.fillRect(canvas.width - 157 + player.x / WORLD_WIDTH * 140, 12 + player.y / WORLD_HEIGHT * 100, 3, 3);
+  ctx.strokeStyle = "#0f0";
+  ctx.strokeRect(canvas.width - 160, 10, 150, 110);
+}
+
+// ================= GAME MANAGER =================
+class Game {
+  constructor() {
+    this.running = true;
+    this.paused = false;
+  }
+  update(dt) {
+    if (!this.running || this.paused) return;
+    updatePlayer();
+    updateBullets();
+    updateEnemies();
+    updateRegen();
+    checkItems();
+    if (player.hp <= 0) this.running = false;
+  }
+  drawOverlay() {
+    if (!this.running) {
+      ctx.fillStyle = "rgba(0,0,0,0.8)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#f44";
+      ctx.font = "48px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+      ctx.font = "24px monospace";
+      ctx.fillStyle = "#fff";
+      ctx.fillText("Press R to Restart | P to Pause", canvas.width / 2, canvas.height / 2 + 60);
+      ctx.textAlign = "left";
+    }
+    if (this.paused) {
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#0f0";
+      ctx.font = "32px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("PAUSED", canvas.width / 2, canvas.height / 2);
+      ctx.textAlign = "left";
+    }
+  }
+}
+
+const game = new Game();
+
+// Global input for controls
+document.addEventListener("keydown", e => {
+  if (e.key.toLowerCase() === 'r' && !game.running) {
+    player = new Player();
+    room = new Room();
+    room.spawnEnemies();
+    bullets = [];
+    items = [];
+    game.running = true;
+  } else if (e.key.toLowerCase() === 'p') {
+    game.paused = !game.paused;
+  }
+});
+
+function gameLoop(time = 0) {
+  frame++;
+  const delta = Math.min((time - lastTime) / 1000, 1/30);
+  lastTime = time;
+  accumulator += delta;
+  while (accumulator >= FIXED_DT) {
+  game.update(FIXED_DT);
+    updateParticles();
+    updateShake();
+    accumulator -= FIXED_DT;
+  }
+  ctx.save();
+  ctx.translate(shakeX, shakeY);
+  draw();
+  ctx.restore();
+  game.drawOverlay();
+  if (game.running || keys['r']) requestAnimationFrame(gameLoop);
+}
+
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
+```
