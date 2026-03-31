@@ -1,15 +1,15 @@
-lad1 = int(input("Digite o primeiro lado: \n"))
-lad2 = int(input("Digite o segundo lado: \n"))
-lad3 = int(input("Digite o terceiro lado: \n"))
+lada = float(input("Digite o primeiro lado: "))
+ladb = float(input("Digite o segundo lado: "))
+ladc = float(input("Digite o terceiro lado: "))
 
-
-if lad1 < lad2 + lad3 and lad2 < lad1 + lad3 and lad3 < lad1 + lad2:
-    if lad1 == lad2 == lad3:
-        print("O triângulo é equilátero.")
-elif lad1 == lad2 or lad1 == lad3 or lad2 == lad3:
-        print("O triângulo é isósceles.")
+if (lada + ladb > ladc) and (lada + ladc > ladb) and (ladb + ladc > lada):
+    print("Os lados formam um triângulo ")
+    
+    if lada == ladb == ladc:
+        print("Equilátero.")
+    elif lada != ladb and ladb != ladc and lada != ladc:
+        print("Escaleno.")
     else:
-        print("O triângulo é escaleno.")
+        print("Isósceles.")
 else:
-    print("Os lados não podem formar um triângulo.")
-
+    print("Os lados não formam um triângulo.")
