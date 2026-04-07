@@ -1,20 +1,14 @@
 n = int(input("Digite um numero \n"))
-lis = range(2, 50)
+lis = range(2, n-1)
 teste = int(0)
-
+i = int(0)
+tes = int(0)
 while i != len(lis):
-   if lis % n == 0:
-      
-   
-   i+= 1
+   if n % lis[i] == 0:
+      teste += 1
+   i = i + 1
 
-
-lis = range(1, n)
-i = 0
-soma = 0
-while i != len(lis):
-   print(lis[i])
-   soma = int(lis[i] + soma)
-   
-
-print(soma)
+if teste != 0:
+   print("O número " + str(n) + " não é primo")
+else:
+   print("O número " + str(n) + " é primo")
