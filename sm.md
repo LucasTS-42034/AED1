@@ -155,7 +155,7 @@ BLOCO 7 — VETORES
 63. Leia 8 números e informe o maior valor e sua posição na lista.
 
 64. Leia 10 números inteiros e crie uma nova lista apenas com os valores pares.
-
+-
 65. Leia uma lista com 6 nomes e exiba em ordem alfabética.
 
 66. Leia 10 números e conte quantas vezes um determinado valor aparece na lista.

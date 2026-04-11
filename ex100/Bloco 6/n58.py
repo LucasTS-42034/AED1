@@ -4,13 +4,13 @@ i = int(0)
 med = float(0)
 
 while True:
-    n = int(input("Digite um número: "))
+    n = int(input("Digite um número: \n"))
     
     if n % 2 == 0:
         soma = soma + n
         i = i + 1
         
-    st = input("Continuar? (S ou N) ")
+    st = input("Continuar? (S ou N) \n")
     
     if st == "N":
         if i > 0:
