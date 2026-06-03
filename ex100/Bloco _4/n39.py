@@ -6,5 +6,7 @@ elif 14 <= x < 18:
     print("Você é um adolescente.")
 elif 18 <= x < 60:
     print("Você é um adulto.")
-elif x >= 60:
+elif 60 <= x <= 120:
     print("Você é um idoso.")
+elif x > 120:
+    print("Você não é humano.")

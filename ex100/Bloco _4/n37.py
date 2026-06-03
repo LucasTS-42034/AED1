@@ -1,5 +1,5 @@
 x = int(input("Digite o valor do produto: \n"))
-desc = int(input("Digite o o valor do desconto: \n"))
+desc = int(input("Digite o o valor do desconto a vista: \n"))
 
 total = int(x * (desc / 100))
 val = int(x - total)

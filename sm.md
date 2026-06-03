@@ -60,8 +60,6 @@ BLOCO 3 — OPERADORES BOOLEANOS
 
 23. Leia dois valores booleanos representados por 0 e 1 e mostre os resultados de and, or e not.
 
-#### FAZER A 23
-
 24. Leia um número e verifique se ele pertence ao intervalo de 10 a 20, inclusive.
 
 25. Leia uma nota e informe se ela está entre 0 e 10.

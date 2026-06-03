@@ -1,13 +1,10 @@
-x = int(0)
-fib = int(0)
-j = int(0)
+x = 0
+fib = 0
+j = 1          
 
-while x <= 15:
-        j == fib
-        x = x + 1
-        fib = fib + j
-        print(fib)
-
-
-     
-
+while x < 15:  
+    print(fib)
+    temp = fib
+    fib = j
+    j = temp + j
+    x = x + 1

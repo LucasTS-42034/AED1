@@ -14,6 +14,6 @@ while x < 10:
         zer += 1
     x = x+1
 
-print(pos)
-print(neg)
-print(zer)
+print("A quantidade de números positivos é " + str(pos))
+print("A quantidade de números negativos é " + str(neg))
+print("A quantidade de zeros é " + str(zer))

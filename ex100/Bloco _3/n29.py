@@ -1,7 +1,7 @@
 user = input("Digite seu nome de usuário: \n")
 senha = input("Digite sua senha: \n")
 
-if user == "Lucas" and senha == "69420":
+if user != "" and senha != "":
     print("Acesso permitido. Seja bem vindo!")
 else:
-    print("Erro! Seu usuário ou senha está errado!")
+    print("Erro! Pelo menos um dos campos está vazio!")

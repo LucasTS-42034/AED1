@@ -1,6 +1,6 @@
-x = int(input("Digite o número: \n"))
+x = int(input("Digite a nota: \n"))
 
-if 0 < x < 10:
-    print("O número está no intervalo.")
+if 0 <= x <= 10:
+    print("A nota está no intervalo.")
 else:
-    print("O número está fora do intervalo.")
+    print("A nota está fora do intervalo.")

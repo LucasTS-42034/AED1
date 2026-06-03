@@ -1,7 +1,8 @@
-num = int(input("Digite true ou false: \n"))
+num = int(input("Digite 1 ou 0: \n"))
 
-if num == 0:
-    print("true")
-
-if num == 1:
+if num != 0 and num != 1:
+    print("Inválido!")
+elif num == 0:
     print("false")
+elif num == 1:
+    print("true")

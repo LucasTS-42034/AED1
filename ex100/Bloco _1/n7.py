@@ -1,5 +1,3 @@
-caractere = "a"
-
-print(caractere)
+caractere = input("Digite uma palavra: \n")
 
 print(caractere.upper())
