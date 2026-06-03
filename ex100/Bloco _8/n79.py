@@ -1,12 +1,12 @@
-lis = []
-i = 0
-menor = 0
-for i in range(5):
-    for j in i:
-        n = int(input("Digite um número: \n"))
-    
-    lis.append(n)
-    if n < menor:
-        n = menor
-    i+=1
+matriz = []
+n = 0
+# Preenchendo a matriz
+for i in range(3):          
+    linha = []
+    for j in range(3):      
+        n = int(input(f"Digite um  número: \n"))
+        linha.append(n)
+    matriz.append(linha)
 
+for linha in matriz:
+    print(linha)
