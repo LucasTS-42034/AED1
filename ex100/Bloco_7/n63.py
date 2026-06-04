@@ -6,6 +6,7 @@ for i in range(8):
     if maior < n:
         maior = n
     lis.append(n)
-    i+=1
+
+print(lis)
 
 print("O maior número é: " + str(n) + " e sua posição é " + str(lis.index(maior)))
