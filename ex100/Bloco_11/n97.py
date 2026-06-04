@@ -5,7 +5,7 @@ def fibonacci(n):
         return 1
     return fibonacci(n - 1) + fibonacci(n - 2)
 
-posicao = int(input("Digite a posição desejada na sequência de Fibonacci: "))
+posicao = int(input("Digite a posição desejada: "))
 
 while True:
     if posicao < 0:

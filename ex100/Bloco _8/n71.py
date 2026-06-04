@@ -1,9 +1,9 @@
-lis = []
-i = 0
+lista = []
 for i in range(5):
     n = int(input("Digite um número: \n"))
-    lis.append(n)
-    i+=1
+    lista.append(n)
 
-x = int(input("Digite a posição de 0 a 5: \n"))
-lis[n] = 
+rotacionada = [lista[-1]] + lista[:-1]
+
+print("Lista original:", lista)
+print("Lista após rotação para a direita:", rotacionada)

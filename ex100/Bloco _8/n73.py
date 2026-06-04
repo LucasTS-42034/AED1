@@ -1,11 +1,12 @@
-lis = []
-i = 0
-maior = 0
+lista = []
 for i in range(5):
-    n = int(input("Digite um número: \n"))
-    lis.append(n)
-    if n < maior:
-        n = maior
-        else 
-    i+=1
+    n = int(input("Digite um número: "))
+    lista.append(n)
 
+distintos = list(set(lista))
+distintos.sort(reverse=True)
+
+if len(distintos) >= 2:
+    print("Segundo maior:", distintos[1])
+else:
+    print("Não há segundo maior.")

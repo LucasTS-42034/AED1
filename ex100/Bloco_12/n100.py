@@ -14,7 +14,7 @@ class ContaBancaria:
             self.saldo -= valor
             print("Saque realizado com sucesso!")
         else:
-            print("Saldo insuficiente ou valor inválido.")
+            print("Saldo insuficient, seu pobre ferrado.")
 
     def exibir_saldo(self):
         print("Saldo atual: R$ " + str(self.saldo))

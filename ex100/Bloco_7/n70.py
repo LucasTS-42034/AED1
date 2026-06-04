@@ -1,11 +1,15 @@
-lis = []
-i = int(0)
-apr = 0
+notas = []
 for i in range(10):
-    n = int(input("Digite um número: \n"))
-    lis.append(n)
-    if n >= 70:
-        apr+=1
+    nota = float(input("Digite a nota: "))
+    notas.append(nota)
 
-print(lis)
-print(apr)
+media = sum(notas) / len(notas)
+
+acima = 0
+for nota in notas:
+    if nota > media:
+        acima += 1
+
+print(notas)
+print(str(media))
+print(str(acima))
